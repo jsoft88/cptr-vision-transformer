@@ -1,0 +1,8 @@
+numpy
+pyspark==2.4.6
+pytorch==1.8.0
+pytorch-lightning==1.4.9
+pandas
+torchvision
+jupyterlab
+Pillow

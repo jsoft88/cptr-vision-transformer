@@ -1,0 +1,37 @@
+{
+  "config": {
+    "embeddings": {
+      "input": {
+        "patch": [{
+          "type": "conv2D",
+          "params": {
+            "in_channel": 3,
+            "out_channel": 3,
+            "stride": [1],
+            "kernel_size": [1],
+            "convolution": "same"
+          }
+        }],
+        "word": [{
+          "type": "embedding",
+          "params": {
+            "num_embeddings": 10,
+            "embedding_dim": 768
+          }
+        }]
+      },
+      "position": [{
+        "type": "sinusoid",
+        "params": {
+          "dims": 768,
+          "num_positions": 10
+        }
+      }, {
+       "type": "parameter",
+        "params": {
+          "dims": 768
+        }
+      }]
+    }
+  }
+}
