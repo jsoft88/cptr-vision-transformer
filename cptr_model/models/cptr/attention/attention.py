@@ -1,27 +1,31 @@
 import math
-from typing import Any, Optional
+from typing import Any, Optional, OrderedDict
 import torch.nn
 
+from cptr_model.config.config import Config
+from cptr_model.core.core_module_extension import CoreModuleExtension
 
-class Attention(torch.nn.Module):
+
+class Attention(torch.nn.Module, CoreModuleExtension):
     KEY_NUM_HEADS = 'num-heads'
     KEY_LATENT_DIM = 'patch-latent-dim'
     KEY_MASKED_ATTENTION = 'masked-attention'
 
-    def __init__(self, **kwargs):
+    def __init__(self, config: Config, **kwargs):
         self.num_heads = kwargs.get(Attention.KEY_NUM_HEADS, None)
         self.latent_dim = kwargs.get(Attention.KEY_LATENT_DIM, None)
         self.__verify_required_args()
         self.attention_head_size = self.latent_dim // self.num_heads
         self.all_head_size = self.attention_head_size * self.num_heads
 
-        self.query = torch.nn.Linear(self.latent_dim, self.all_head_size)
-        self.key = torch.nn.Linear(self.latent_dim, self.all_head_size)
-        self.value = torch.nn.Linear(self.latent_dim, self.all_head_size)
+        self.query = torch.nn.Linear(self.latent_dim, self.all_head_size).to(config.device)
+        self.key = torch.nn.Linear(self.latent_dim, self.all_head_size).to(config.device)
+        self.value = torch.nn.Linear(self.latent_dim, self.all_head_size).to(config.device)
 
         self.masked_attention = kwargs.get(Attention.KEY_MASKED_ATTENTION, False)
-        self.softmax = torch.nn.Softmax(dim=-1)
-        self.out = torch.nn.Linear(self.latent_dim, self.latent_dim)
+        self.softmax = torch.nn.Softmax(dim=-1).to(config.device)
+        self.out = torch.nn.Linear(self.latent_dim, self.latent_dim).to(config.device)
+        
         super().__init__()
 
     def __generate_subsequent_mask(self, *shape: int, device: torch.device) -> torch.Tensor:
@@ -72,3 +76,41 @@ class Attention(torch.nn.Module):
         attention_output = self.out(context_layer)
 
         return attention_output, attention_probs
+
+    def weight_transfer_from_dict(self, weights: OrderedDict[str, Any]) -> None:
+        model_dict = self.state_dict()
+        model_dict[Attention.StateKey.ATTENTION_QUERY_WEIGHT] = weights[Attention.StateKey.ATTENTION_QUERY_WEIGHT]
+        model_dict[Attention.StateKey.ATTENTION_KEY_WEIGHT] = weights[Attention.StateKey.ATTENTION_KEY_WEIGHT]
+        model_dict[Attention.StateKey.ATTENTION_VALUE_WEIGHT] = weights[Attention.StateKey.ATTENTION_VALUE_WEIGHT]
+
+        self.load_state_dict(model_dict)
+
+    def weight_transfer_to_dict(self) -> OrderedDict[str, Any]:
+        return OrderedDict({
+            Attention.StateKey.ATTENTION_QUERY_WEIGHT: self.query.weight,
+            Attention.StateKey.ATTENTION_KEY_WEIGHT: self.key.weight,
+            Attention.StateKey.ATTENTION_VALUE_WEIGHT: self.value.weight
+        })
+
+    def bias_transfer_from_dict(self, bias: OrderedDict[str, Any]) -> None:
+        model_dict = self.state_dict()
+        model_dict[Attention.StateKey.ATTENTION_QUERY_BIAS] = bias[Attention.StateKey.ATTENTION_QUERY_BIAS]
+        model_dict[Attention.StateKey.ATTENTION_KEY_BIAS] = bias[Attention.StateKey.ATTENTION_KEY_BIAS]
+        model_dict[Attention.StateKey.ATTENTION_VALUE_BIAS] = bias[Attention.StateKey.ATTENTION_VALUE_BIAS]
+
+        self.load_state_dict(model_dict)
+
+    def bias_transfer_to_dict(self) -> OrderedDict[str, Any]:
+        return OrderedDict({
+            Attention.StateKey.ATTENTION_QUERY_BIAS: self.query.bias,
+            Attention.StateKey.ATTENTION_KEY_BIAS: self.key.bias,
+            Attention.StateKey.ATTENTION_VALUE_BIAS: self.value.bias
+        })
+
+    class StateKey:
+        ATTENTION_QUERY_WEIGHT = 'query.weight'
+        ATTENTION_KEY_WEIGHT = 'key.weight'
+        ATTENTION_VALUE_WEIGHT = 'value.weight'
+        ATTENTION_QUERY_BIAS = 'query.bias'
+        ATTENTION_KEY_BIAS = 'key.bias'
+        ATTENTION_VALUE_BIAS = 'value.bias'

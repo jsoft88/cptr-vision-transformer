@@ -21,3 +21,9 @@ class ModelBuilder:
 
     def _assign_state_to_model(self) -> None:
         raise NotImplementedError('_assign_state_to_model not implemented')
+
+    def save_model_state(self) -> None:
+        self._model_state_to_storage()
+
+    def _model_state_to_storage(self) -> None:
+        raise NotImplementedError('_model_state_to_storage not implemented')

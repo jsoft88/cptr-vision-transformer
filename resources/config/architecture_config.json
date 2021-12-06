@@ -1,37 +1,167 @@
 {
-  "config": {
-    "embeddings": {
-      "input": {
-        "patch": [{
-          "type": "conv2D",
-          "params": {
-            "in_channel": 3,
-            "out_channel": 3,
-            "stride": [1],
-            "kernel_size": [1],
-            "convolution": "same"
+  "model": {
+    "name": "cptr",
+    "blocks": [
+      {
+        "name": "encoder_block",
+        "layers": [
+          {
+            "name": "input",
+            "sublayers": [
+              {
+                "name": "patch_embedding",
+                "params": [
+                  {
+                    "name": "dim",
+                    "value": 768
+                  },
+                  {
+                    "name": "channels_in",
+                    "value": 3
+                  },
+                  {
+                    "name": "channels_out",
+                    "value": 3
+                  },
+                  {
+                    "name": "height",
+                    "value": 384
+                  },
+                  {
+                    "name": "width",
+                    "value": 384
+                  },
+                  {
+                    "name": "kernel_size",
+                    "value": 16
+                  },
+                  {
+                    "name": "padding",
+                    "value": "same"
+                  }
+                ]
+              },
+              {
+                "name": "encoder_position_embedding",
+                "params": [
+                  {
+                    "name": "type",
+                    "value": "parameter"
+                  },
+                  {
+                    "name": "dim",
+                    "value": 768
+                  },
+                  {
+                    "name": "num_positions",
+                    "value": 10
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "attention_layer",
+            "sublayers": [
+              {
+                "name": "attention",
+                "params": [
+                  {
+                    "name": "dim",
+                    "value": 768
+                  },
+                  {
+                    "name": "heads",
+                    "value": 8
+                  },
+                  {
+                    "name": "Ne",
+                    "value": 12
+                  },
+                  {
+                    "name": "mlp_dropout",
+                    "value": 0.01
+                  },
+                  {
+                    "name": "mlp_dim",
+                    "value": 10
+                  }
+                ]
+              }
+            ]
           }
-        }],
-        "word": [{
-          "type": "embedding",
-          "params": {
-            "num_embeddings": 10,
-            "embedding_dim": 768
-          }
-        }]
+        ]
       },
-      "position": [{
-        "type": "sinusoid",
-        "params": {
-          "dims": 768,
-          "num_positions": 10
-        }
-      }, {
-       "type": "parameter",
-        "params": {
-          "dims": 768
-        }
-      }]
-    }
+      {
+        "name": "decoder_block",
+        "layers": [
+          {
+            "name": "input",
+            "sublayers": [
+              {
+                "name": "word_embedding",
+                "params": [
+                  {
+                    "name": "dim",
+                    "value": 768
+                  },
+                  {
+                    "name": "num_positions",
+                    "value": 10
+                  },
+                  {
+                    "name": "vocab_size",
+                    "value": 10000
+                  }
+                ]
+              },
+              {
+                "name": "decoder_position_embedding",
+                "params": [
+                  {
+                    "name": "type",
+                    "value": "sinusoid"
+                  },
+                  {
+                    "name": "dim",
+                    "value": 512
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "attention_layer",
+            "sublayers": [
+              {
+                "name": "attention",
+                "params": [
+                  {
+                    "name": "dim",
+                    "value": 512
+                  },
+                  {
+                    "name": "heads",
+                    "value": 8
+                  },
+                  {
+                    "name": "Nd",
+                    "value": 4
+                  },
+                  {
+                    "name": "mlp_dropout",
+                    "value": 0.01
+                  },
+                  {
+                    "name": "mlp_dim",
+                    "value": 10
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

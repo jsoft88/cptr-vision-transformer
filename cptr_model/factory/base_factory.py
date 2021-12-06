@@ -2,7 +2,7 @@ import abc
 from typing import List, TypeVar, Generic, Optional
 
 from cptr_model.config.config import Config
-from cptr_model.config.architecture_config_file_manager import ArchitectureConfigFileManager
+from cptr_model.config.specifics.cptr.architecture_config_file_manager import ArchitectureConfigFileManager
 
 T = TypeVar('T')
 

@@ -1,7 +1,7 @@
 from typing import List, Union, Optional
 import torch.nn
 from cptr_model.config.config import Config
-from cptr_model.config.architecture_config_file_manager import ArchitectureConfigFileManager
+from cptr_model.config.specifics.cptr.architecture_config_file_manager import ArchitectureConfigFileManager
 from cptr_model.embeddings.input.patch_embedding import PatchEmbedding
 from cptr_model.embeddings.input.word_embedding import WordEmbedding
 from cptr_model.factory.base_factory import BaseFactory
@@ -22,7 +22,7 @@ class EmbeddingFactory(BaseFactory[Union[torch.nn.Module, torch.nn.Parameter]]):
                      config_file_manager: Optional[ArchitectureConfigFileManager],
                      **kwargs) -> Union[torch.nn.Module, torch.nn.Parameter]:
         instance = {
-            EmbeddingFactory.STANDARD_EMBEDDING: PatchEmbedding(kwargs),
+            EmbeddingFactory.PATCH_EMBEDDING: PatchEmbedding(kwargs),
             EmbeddingFactory.WORD_EMBEDDING: WordEmbedding(kwargs)
         }.get(type_str, None)
 

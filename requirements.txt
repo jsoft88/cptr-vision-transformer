@@ -3,6 +3,10 @@ pyspark==2.4.6
 pytorch==1.8.0
 pytorch-lightning==1.4.9
 pandas
-torchvision
+torchvision==0.9.2
 jupyterlab
 Pillow
+cudatoolkit==10.2
+torchaudio==0.8.2
+torchtext==0.9
+spacy

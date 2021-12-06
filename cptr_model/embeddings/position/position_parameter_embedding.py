@@ -1,30 +1,38 @@
+from typing import OrderedDict, Any
+
 import torch.nn
-from cptr_model.config.architecture_config_file_manager import ArchitectureConfigFileManager
+from cptr_model.config.specifics.cptr.architecture_config_file_manager import ArchitectureConfigFileManager
 from cptr_model.config.config import Config
 from cptr_model.embeddings.position.base_position_embedding import BasePositionEmbedding
 
 
 class PositionParameterEmbedding(BasePositionEmbedding[torch.nn.Parameter]):
-    _KEY_DIMS = 'dims'
+    KEY_DIMS = 'dims'
 
-    def __init__(self, config: Config, config_manager: ArchitectureConfigFileManager, **kwargs):
+    def __init__(self, config: Config, **kwargs):
         self.config = config
-        self.config_file_manager = config_manager
-
-        self.config_section = self.config_file_manager.get_embeddings_config_for(
-            ArchitectureConfigFileManager.ArchitectureParts.SECTION_EMBEDDINGS_POSITION)
+        self.dims = kwargs.get(PositionParameterEmbedding.KEY_DIMS, None)
+        self.param_position_embedding: torch.nn.Parameter = torch.nn.Parameter(torch.zeros(self.dims))
 
         super().__init__(kwargs)
 
-        params = self.config_file_manager.get_embeddings_params(
-            self.config.encoder_position_embedding_config_section, self.config_section
-        )
-
-        self.dims = self.config_file_manager.get_param_value_for(PositionParameterEmbedding._KEY_DIMS, params)
-
     def __verify_required_args(self) -> None:
-        if not self.config_section:
-            raise ValueError('PositionEmbedding:: dims is None')
+        if not self.dims:
+            raise ValueError(f'PositionEmbedding:: {PositionParameterEmbedding.KEY_DIMS} is None')
 
     def get_position_embedding_layer(self) -> torch.nn.Parameter:
-        return torch.nn.Parameter(torch.zeros(self.dims))
+        return self.param_position_embedding
+
+    def weight_transfer_from_dict(self, weights: OrderedDict[str, Any]) -> None:
+        self.param_position_embedding = weights['param_position_embedding']
+
+    def bias_transfer_from_dict(self, bias: OrderedDict[str, Any]) -> None:
+        return
+
+    def weight_transfer_to_dict(self) -> OrderedDict[str, Any]:
+        return OrderedDict({
+            'param_position_embedding': self.param_position_embedding
+        })
+
+    def bias_transfer_to_dict(self) -> OrderedDict[str, Any]:
+        return None

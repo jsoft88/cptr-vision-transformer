@@ -1,8 +1,11 @@
 from typing import List
 import argparse
+import torch.cuda
 from cptr_model.factory.data_loaders.data_loader_factory import DataLoaderFactory
 from cptr_model.factory.input_embeddings.embedding_factory import EmbeddingFactory
+from cptr_model.factory.models.initializers_factory import InitializersFactory
 from cptr_model.factory.positional_embeddings.positional_embedding_factory import PositionalEmbeddingFactory
+from cptr_model.factory.utils.fs_factory import FSFactory
 
 
 class Config:
@@ -14,41 +17,9 @@ class Config:
         general_group = parser.add_argument_group('general')
 
         encoder_group.add_argument(
-            '--enc-input-embedding-dim',
-            help='Dimension of image patches embeddings',
-            dest='enc_input_embedding_dim',
-            default=None,
-            required=True
-        )
-
-        encoder_group.add_argument(
             '--enc-input-embedding-type',
             help=f'Type of embedding to use for patches. One of {",".join(EmbeddingFactory.all_types())}',
             dest='enc_input_embedding_type',
-            default=None,
-            required=True
-        )
-
-        encoder_group.add_argument(
-            '--enc-input-embedding-config-section',
-            help='The key used in the config file to get configuration section for the type of input embedding',
-            default=None,
-            dest='enc_input_embedding_config_section',
-            required=True
-        )
-
-        encoder_group.add_argument(
-            '--num-encoder-blocks',
-            help='Number of encoding blocks to use',
-            dest='num_encoder_blocks',
-            default=None,
-            required=True
-        )
-
-        encoder_group.add_argument(
-            '--num-attention-heads',
-            help='Number of attention heads to use',
-            dest='num_attention_heads',
             default=None,
             required=True
         )
@@ -59,14 +30,6 @@ class Config:
             Type of position embedding to use in encoder.
             One of {",".join(PositionalEmbeddingFactory.all_types())}''',
             dest='enc_position_embedding_type',
-            default=None,
-            required=True
-        )
-
-        encoder_group.add_argument(
-            '--enc-position-embedding-config-section',
-            help='The key used in the config file to get configuration section for the type of position embedding',
-            dest='enc_position_embedding_config_section',
             default=None,
             required=True
         )
@@ -104,10 +67,10 @@ class Config:
             required=True
         )
 
-        decoder_group.add_argument(
-            '--dec-input-embedding-dim',
-            help='Dimension of word embeddings',
-            dest='dec_input_embedding_dim',
+        encoder_group.add_argument(
+            '--enc-norm-eps',
+            help='epsilon value to use in normalization layer in encoder',
+            dest='enc_norm_eps',
             default=None,
             required=True
         )
@@ -121,14 +84,6 @@ class Config:
         )
 
         decoder_group.add_argument(
-            '--dec-input-embedding-config-section',
-            help=f'Key used in config file to get configuration section for the input embedding type',
-            dest='dec_input_embedding_config_section',
-            default=None,
-            required=True
-        )
-
-        decoder_group.add_argument(
             '--dec-position-embedding-type',
             help=f'''
             Type of position embedding to use in the decoder. 
@@ -136,14 +91,6 @@ class Config:
             dest='dec_position_embedding_type',
             default=None,
             required=True
-        )
-
-        decoder_group.add_argument(
-            '--dec-position-embedding-config-section',
-            help='Key used in config file to get configuration section for the position embedding type',
-            default=None,
-            required=True,
-            dest='dec_position_embedding_config_section'
         )
 
         decoder_group.add_argument(
@@ -179,6 +126,22 @@ class Config:
             required=True
         )
 
+        decoder_group.add_argument(
+            '--dec-norm-eps',
+            help='epsilon value to use in normalization layer in decoder',
+            dest='dec_norm_eps',
+            default=None,
+            required=True
+        )
+
+        decoder_group.add_argument(
+            '--dec-lang',
+            help='Decoder language to use',
+            choices=['en', 'es', 'it'],
+            default='en',
+            dest='dec_lang'
+        )
+
         general_group.add_argument(
             '--model-output-location',
             help='Absolute path to the location where the trained model will be placed',
@@ -203,26 +166,140 @@ class Config:
             required=True
         )
 
+        general_group.add_argument(
+            '--file-system',
+            help=f'One of {",".join(FSFactory.all_types())}',
+            default=None,
+            dest='file_system',
+            required=True
+        )
+
+        general_group.add_argument(
+            'fs-options',
+            metavar='KEY=VALUE',
+            default=None,
+            dest='fs_options',
+            nargs='+',
+            required=False,
+            help='KEY=VALUE list of options to pass to the file system manager. Separate each KEY=VALUE with spaces'
+        )
+
+        general_group.add_argument(
+            '--pretrained-weights-path',
+            default=None,
+            dest='pretrained_weights_path',
+            required=False,
+            help='Absolute path with protocol (if required) to the stored model'
+        )
+
+        general_group.add_argument(
+            '--with-pretrained-weights',
+            default=False,
+            dest='with_pretrained_weights',
+            action='store_true',
+            help='When provided, the pretrained weights will be loaded into the model. '
+        )
+
+        general_group.add_argument(
+            '--default-use-gpu',
+            default=False,
+            dest='default_use_gpu',
+            action='store_true',
+            help='By default, every tensor/layer will be create using GPU'
+        )
+
+        general_group.add_argument(
+            '--model-save-file-system',
+            default=None,
+            dest='model_save_file_system',
+            help=f'file system to use when saving model state. One of {",".join(FSFactory.all_types())}'
+        )
+
+        general_group.add_argument(
+            '--model-save-fs-options',
+            metavar='KEY=VALUE',
+            default=None,
+            dest='model_save_fs_options',
+            nargs='+',
+            required=False,
+            help='KEY=VALUE list of options to pass to the file system manager. Separate each KEY=VALUE with spaces'
+        )
+
+        general_group.add_argument(
+            '--model-save-path',
+            dest='model_save_path',
+            help='Absolute path where the model will be saved (with protocol included if any)',
+            default=None,
+            required=False
+        )
+
+        general_group.add_argument(
+            '--tmp-dir',
+            default='/tmp/cptr_staging_dir',
+            help='Absolute path in local FS where temporary outputs are dumped. Default is /tmp/cptr_staging_dir',
+            required=False,
+            dest='tmp_dir'
+        )
+
+        general_group.add_argument(
+            '--requires-model-init',
+            dest='requires_model_init',
+            action='store_true',
+            default=False,
+            help='Include this flag if initialization needs to be performed using an external pretrained model'
+        )
+
+        general_group.add_argument(
+            '--model-init-path',
+            dest='model_init_path',
+            default=None,
+            help='Absolute path (with protocol if required) to the model to use for initialization'
+        )
+
+        general_group.add_argument(
+            '--model-initializer-type',
+            dest='model_initializer_type',
+            help=f'Type of model initializer to use. One of: {",".join(InitializersFactory.all_types())}',
+            default=None
+        )
+
         parsed_args = parser.parse_args(args)
         self.encoder_position_embedding_type = parsed_args.enc_position_embedding_type
-        self.encoder_input_embedding_dim = parsed_args.enc_input_embedding_dim
+
         self.encoder_input_embedding_type = parsed_args.enc_input_embedding_type
         self.encoder_data_loader_type = parsed_args.enc_data_loader_type
-        self.num_encoder_blocks = parsed_args.num_encoder_blocks
+
         self.encoder_transformation_types = parsed_args.enc_transformation_types
         self.encoder_batch_size = parsed_args.enc_batch_size
         self.encoder_data_location = parsed_args.enc_data_location
-        self.encoder_input_embedding_config_section = parsed_args.enc_input_embedding_config_section
-        self.encoder_position_embedding_config_section = parsed_args.enc_position_embedding_config_section
+
+
+        self.encoder_normalization_eps = parsed_args.enc_norm_eps
         self.decoder_position_embedding_type = parsed_args.dec_position_embedding_type
-        self.decoder_input_embedding_dim = parsed_args.dec_input_embedding_dim
+
         self.decoder_input_embedding_type = parsed_args.dec_input_embedding_type
         self.decoder_data_loader_type = parsed_args.dec_data_loader_type
-        self.num_decoder_blocks = parsed_args.num_decoder_blocks
+
         self.decoder_transformation_types = parsed_args.dec_transformation_types
         self.decoder_batch_size = parsed_args.dec_batch_size
         self.decoder_data_location = parsed_args.dec_data_location
-        self.decoder_position_embedding_config_section = parsed_args.dec_position_embedding_config_section
-        self.decoder_input_embedding_config_section = parsed_args.dec_input_embedding_config_section
+        self.dec_lang = parsed_args.dec_lang
+
+        self.decoder_normalization_eps = parsed_args.dec_norm_eps
         self.config_file = parsed_args.config_file
+        self.file_system_type = parsed_args.file_system
+        self.file_system_options = dict([entry.split('=') for entry in (parsed_args.fs_options or [])])
+        self.pretrained_model_path = parsed_args.pretrained_weights_path
+        self.with_pretrained_model = False if not self.pretrained_model_path else parsed_args.with_pretrained_weights
+        self.default_use_gpu = False if not torch.cuda.is_available() else parsed_args.default_use_gpu
+        self.device = torch.device('cuda' if self.default_use_gpu else 'cpu')
+        self.model_save_file_system = parsed_args.model_save_file_system
+        self.model_save_fs_options = dict([entry.split('=') for entry in (parsed_args.model_save_fs_options or [])])
+        self.model_save_path = parsed_args.model_save_path
+        self.tmp_dir = parsed_args.tmp_dir
+        self.requires_model_init = parsed_args.requires_model_init
+        self.model_init_path = parsed_args.model_init_path
+        self.model_initializer_type = parsed_args.model_initializer_type
+
+
 

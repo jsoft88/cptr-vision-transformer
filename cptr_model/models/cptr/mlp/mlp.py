@@ -1,10 +1,12 @@
-from typing import Any
+from typing import Any, OrderedDict
 
 import torch.nn
 from pytorch_lightning import LightningModule
 
+from cptr_model.core.core_module_extension import CoreModuleExtension
 
-class MLP(LightningModule):
+
+class MLP(LightningModule, CoreModuleExtension):
     KEY_LATENT_DIM = 'latent-dim'
     KEY_MLP_DIM = 'mlp-dim'
     KEY_DROPOUT_RATE = 'dropout-rate'
@@ -46,3 +48,35 @@ class MLP(LightningModule):
         x = self.dropout(x)
         x = self.fc2(x)
         return x
+
+    def weight_transfer_from_dict(self, weights: OrderedDict[str, Any]) -> None:
+        model_dict = self.state_dict()
+        model_dict[MLP.StateKey.MLP_FC1_WEIGHT] = weights[MLP.StateKey.MLP_FC1_WEIGHT]
+        model_dict[MLP.StateKey.MLP_FC2_WEIGHT] = weights[MLP.StateKey.MLP_FC2_WEIGHT]
+        self.load_state_dict(model_dict)
+
+    def bias_transfer_from_dict(self, bias: OrderedDict[str, Any]) -> None:
+        model_dict = self.state_dict()
+        model_dict[MLP.StateKey.MLP_FC1_BIAS] = bias[MLP.StateKey.MLP_FC1_BIAS]
+        model_dict[MLP.StateKey.MLP_FC2_BIAS] = bias[MLP.StateKey.MLP_FC2_BIAS]
+        self.load_state_dict(model_dict)
+
+    def weight_transfer_to_dict(self) -> OrderedDict[str, Any]:
+        return OrderedDict({
+            MLP.StateKey.MLP_FC1_WEIGHT: self.fc1.weight,
+            MLP.StateKey.MLP_FC2_WEIGHT: self.fc2.weight
+        })
+
+    def bias_transfer_to_dict(self) -> OrderedDict[str, Any]:
+        return OrderedDict({
+            MLP.StateKey.MLP_FC1_BIAS: self.fc1.bias,
+            MLP.StateKey.MLP_FC2_BIAS: self.fc2.bias
+        })
+
+    class StateKey:
+        MLP_FC1_WEIGHT = 'fc1.weight'
+        MLP_FC1_BIAS = 'fc1.bias'
+        MLP_FC2_WEIGHT = 'fc2.weight'
+        MLP_FC2_BIAS = 'fc2.bias'
+        MLP_DROPOUT_WEIGHT = 'dropout.weight'
+        MLP_DROPOUT_BIAS = 'dropout.bias'
