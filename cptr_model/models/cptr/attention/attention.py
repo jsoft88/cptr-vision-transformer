@@ -1,7 +1,8 @@
 import math
 from typing import Any, Optional, OrderedDict
-import torch.nn
-
+import torch
+from torch.nn.modules import Linear
+from torch.nn.modules.activation import Softmax
 from cptr_model.config.config import Config
 from cptr_model.core.core_module_extension import CoreModuleExtension
 
@@ -17,26 +18,17 @@ class Attention(torch.nn.Module, CoreModuleExtension):
         self.__verify_required_args()
         self.attention_head_size = self.latent_dim // self.num_heads
         self.all_head_size = self.attention_head_size * self.num_heads
+        self.config = config
 
-        self.query = torch.nn.Linear(self.latent_dim, self.all_head_size).to(config.device)
-        self.key = torch.nn.Linear(self.latent_dim, self.all_head_size).to(config.device)
-        self.value = torch.nn.Linear(self.latent_dim, self.all_head_size).to(config.device)
+        super().__init__()
+        
+        self.query = Linear(self.latent_dim, self.all_head_size).to(config.device)
+        self.key = Linear(self.latent_dim, self.all_head_size).to(config.device)
+        self.value = Linear(self.latent_dim, self.all_head_size).to(config.device)
 
         self.masked_attention = kwargs.get(Attention.KEY_MASKED_ATTENTION, False)
-        self.softmax = torch.nn.Softmax(dim=-1).to(config.device)
-        self.out = torch.nn.Linear(self.latent_dim, self.latent_dim).to(config.device)
-        
-        super().__init__()
-
-    def __generate_subsequent_mask(self, *shape: int, device: torch.device) -> torch.Tensor:
-        sz_b, len_s = shape
-        subsequent_mask = torch.triu(
-            # The input sequences are all batches, so the original 2-dimensional tensor
-            # is expanded into a 3-dimensional tensor
-            torch.ones((len_s, len_s), device=device, dtype=torch.uint8), diagonal=1)
-        subsequent_mask = subsequent_mask.unsqueeze(0).expand(sz_b, -1, -1)  # bx ls x ls
-
-        return subsequent_mask
+        self.softmax = Softmax(dim=-1).to(config.device)
+        self.out = Linear(self.latent_dim, self.latent_dim).to(config.device)
 
     def __verify_required_args(self) -> None:
         if not self.num_heads:
@@ -52,10 +44,10 @@ class Attention(torch.nn.Module, CoreModuleExtension):
         # permute: (N, h, P*P, D/h)
         return x.permute(0, 2, 1, 3)
 
-    def forward(self, x: torch.Tensor, k: Optional[torch.Tensor], v: Optional[torch.Tensor]) -> Any:
+    def forward(self, x: torch.Tensor, k: Optional[torch.Tensor] = None, v: Optional[torch.Tensor] = None, mask: Optional[torch.Tensor] = None) -> Any:
         mixed_query_layer = self.query(x)
-        mixed_key_layer = self.key(x if not k else k)
-        mixed_value_layer = self.value(x if not v else v)
+        mixed_key_layer = self.key(k if not (k is None) else x)
+        mixed_value_layer = self.value(v if not (v is None) else x)
 
         query_layer = self.__transpose_for_scores(mixed_query_layer)
         key_layer = self.__transpose_for_scores(mixed_key_layer)
@@ -63,9 +55,8 @@ class Attention(torch.nn.Module, CoreModuleExtension):
 
         attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
-        if self.masked_attention:
-            mask = self.__generate_subsequent_mask(*x.size())
-            attention_scores.masked_fill(mask == 0, -1e9)
+        if not (mask is None):
+            attention_scores = attention_scores + (mask * -1e9)
         attention_probs = self.softmax(attention_scores)
 
         context_layer = torch.matmul(attention_probs, value_layer)
@@ -74,7 +65,7 @@ class Attention(torch.nn.Module, CoreModuleExtension):
         new_context_layer_shape = context_layer.size()[: -2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
         attention_output = self.out(context_layer)
-
+        print(f'OUTPUT ATTENTION IS ==> {attention_output.shape}')
         return attention_output, attention_probs
 
     def weight_transfer_from_dict(self, weights: OrderedDict[str, Any]) -> None:
@@ -82,6 +73,7 @@ class Attention(torch.nn.Module, CoreModuleExtension):
         model_dict[Attention.StateKey.ATTENTION_QUERY_WEIGHT] = weights[Attention.StateKey.ATTENTION_QUERY_WEIGHT]
         model_dict[Attention.StateKey.ATTENTION_KEY_WEIGHT] = weights[Attention.StateKey.ATTENTION_KEY_WEIGHT]
         model_dict[Attention.StateKey.ATTENTION_VALUE_WEIGHT] = weights[Attention.StateKey.ATTENTION_VALUE_WEIGHT]
+        model_dict[Attention.StateKey.ATTENTION_OUT_WEIGHT] = weights[Attention.StateKey.ATTENTION_OUT_WEIGHT]
 
         self.load_state_dict(model_dict)
 
@@ -89,7 +81,8 @@ class Attention(torch.nn.Module, CoreModuleExtension):
         return OrderedDict({
             Attention.StateKey.ATTENTION_QUERY_WEIGHT: self.query.weight,
             Attention.StateKey.ATTENTION_KEY_WEIGHT: self.key.weight,
-            Attention.StateKey.ATTENTION_VALUE_WEIGHT: self.value.weight
+            Attention.StateKey.ATTENTION_VALUE_WEIGHT: self.value.weight,
+            Attention.StateKey.ATTENTION_OUT_WEIGHT: self.out.weight
         })
 
     def bias_transfer_from_dict(self, bias: OrderedDict[str, Any]) -> None:
@@ -97,6 +90,7 @@ class Attention(torch.nn.Module, CoreModuleExtension):
         model_dict[Attention.StateKey.ATTENTION_QUERY_BIAS] = bias[Attention.StateKey.ATTENTION_QUERY_BIAS]
         model_dict[Attention.StateKey.ATTENTION_KEY_BIAS] = bias[Attention.StateKey.ATTENTION_KEY_BIAS]
         model_dict[Attention.StateKey.ATTENTION_VALUE_BIAS] = bias[Attention.StateKey.ATTENTION_VALUE_BIAS]
+        model_dict[Attention.StateKey.ATTENTION_OUT_BIAS] = bias[Attention.StateKey.ATTENTION_OUT_BIAS]
 
         self.load_state_dict(model_dict)
 
@@ -104,7 +98,8 @@ class Attention(torch.nn.Module, CoreModuleExtension):
         return OrderedDict({
             Attention.StateKey.ATTENTION_QUERY_BIAS: self.query.bias,
             Attention.StateKey.ATTENTION_KEY_BIAS: self.key.bias,
-            Attention.StateKey.ATTENTION_VALUE_BIAS: self.value.bias
+            Attention.StateKey.ATTENTION_VALUE_BIAS: self.value.bias,
+            Attention.StateKey.ATTENTION_OUT_BIAS: self.out.bias
         })
 
     class StateKey:
@@ -114,3 +109,6 @@ class Attention(torch.nn.Module, CoreModuleExtension):
         ATTENTION_QUERY_BIAS = 'query.bias'
         ATTENTION_KEY_BIAS = 'key.bias'
         ATTENTION_VALUE_BIAS = 'value.bias'
+        ATTENTION_OUT_WEIGHT = 'out.weight'
+        ATTENTION_OUT_BIAS = 'out.bias'
+

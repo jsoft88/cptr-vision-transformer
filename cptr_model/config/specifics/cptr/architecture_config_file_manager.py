@@ -2,47 +2,48 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Union, List, Dict
-
 from cptr_model.utils.utils import Utils
 
 
 class ArchitectureConfigFileManager:
-    def __init__(self, file_name: str) -> None:
-        root = Path(__file__).parent.parent.parent.resolve()
-        self.path = Path(root).joinpath("resources", "config", file_name)
-        self.config_json = Utils.read_json_from_file(self.path)
-        self.config_object = json.loads(self.config_json, object_hook=lambda d: SimpleNamespace(**d))
-
-    def get_blocks(self) -> List[Any]:
-        return [b for b in self.config_object.model.blocks]
-
-    def get_layers_of(self, block: Any) -> List[Any]:
-        return [l for l in block.layers]
-
-    def get_sublayers_of(self, layer: Any) -> List[Any]:
-        return [sl for sl in layer.sublayers]
-
-    @classmethod
-    def get_block_name(cls, block: Any) -> str:
-        return block.name
-
-    @classmethod
-    def get_layer_name(cls, layer: Any) -> str:
-        return layer.name
-
-    @classmethod
-    def get_sublayer_name(cls, sublayer: Any) -> str:
-        return sublayer.name
-
-    @classmethod
-    def get_params_for_sublayer(cls, sublayer: Any) -> Dict[str, Union[str, float, List[Any], int]]:
-        return {p.name: p.value for p in sublayer.params}
-
-    def get_sublayer_with_query(self, block_name: str, layer_name: str, sublayer_name: str):
-        layers = eval(f'self.config_object.{block_name}')
-        layer = [l for l in layers if ArchitectureConfigFileManager.get_layer_name(l) == layer_name][0]
-        sublayers = self.get_sublayers_of(layer)
-        return [sl for sl in sublayers if ArchitectureConfigFileManager.get_sublayer_name(sl) == sublayer_name][0]
+    def __init__(self) -> None:
+        self.encoder_input_embedding_type = None
+        self.decoder_input_embedding_type = None
+        self.encoder_input_embeddings_params_dict = None
+        self.patch_embedding_dim = None
+        self.patch_embedding_channel_in = None
+        self.patch_embedding_channel_out = None
+        self.patch_embedding_height = None
+        self.patch_embedding_width = None
+        self.patch_embedding_kernel_size = None
+        self.patch_embedding_stride = None
+        self.patch_embedding_padding = None
+        self.encoder_position_embedding_type = None
+        # It is more useful to delegate params parsing to the position embedder
+        # for more flexibility to replace during runtime
+        self.encoder_position_embedding_params_dict = None
+        self.encoder_self_attention_dim = None
+        self.encoder_self_attention_heads = None
+        self.encoder_self_attention_mlp_dim = None
+        self.encoder_self_attention_mlp_dropout = None
+        self.encoder_num_blocks = None
+        self.decoder_input_embeddings_params_dict = None
+        self.decoder_word_embedding_dim = None
+        self.decoder_word_embedding_num_positions = None
+        # It is more useful to delegate params parsing to the position embedder
+        # for more flexibility to replace during runtime
+        self.decoder_position_embedding_params_dict = None
+        self.decoder_position_embedding_type = None
+        self.decoder_masked_self_attention_dim = None
+        self.decoder_masked_self_attention_heads = None
+        self.decoder_masked_self_attention_mlp_dropout = None
+        self.decoder_masked_self_attention_mlp_dim = None
+        self.decoder_cross_attention_dim = None
+        self.decoder_cross_attention_heads = None
+        self.decoder_cross_attention_mlp_dropout = None
+        self.decoder_cross_attention_mlp_dim = None
+        self.decoder_num_blocks = None
+        self.decoder_max_seq_len = None
 
     class Model:
         class EncoderBlock:
@@ -98,5 +99,17 @@ class ArchitectureConfigFileManager:
         class DecoderPositionEmbeddingParams:
             TYPE = 'type'
             DIM = 'dim'
+
+        class Transformations:
+            APPLY_TO = 'apply_to'
+            TRANSFORMS = 'transforms'
+
+            class Transform:
+                TYPE = 'type'
+                EXTRA_ARGS = 'extra_args'
+
+            class ApplyTo:
+                IMAGE = 'image'
+                TENSOR = 'tensor'
 
 

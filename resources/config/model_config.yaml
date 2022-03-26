@@ -1,0 +1,86 @@
+model:
+  cptr:
+    architecture:
+      blocks:
+        - encoder:
+            layers:
+              - input:
+                  sublayers:
+                    - patch_embedding:
+                        params:
+                          - dim: 768
+                          - channel_in: 3
+                          - channel_out: 768
+                          - height: 384
+                          - width: 384
+                          - kernel_size:
+                            - 16
+                            - 16
+                          - stride:
+                            - 16
+                            - 16
+                          - padding: same
+                          - type: patch-conv
+                    - encoder_position_embedding:
+                        params:
+                          - type: parameter
+                          - dims:
+                              - ${dynamic_linker:batch-size}
+                              - 576
+                              - 768
+                          - num_positions: 576
+              - encoder_block:
+                  sublayers:
+                    - self_attention:
+                        params:
+                          - dim: 768
+                          - heads: 8
+                          - mlp_dropout: 0.01
+                          - mlp_dim: 3072
+                  num_blocks: 12
+        - decoder:
+            layers:
+              - input:
+                  sublayers:
+                    - word_embeddings:
+                        params:
+                          - dim: 768
+                          - num_positions: 510
+                          - type: bert
+                    - decoder_position_embedding:
+                        params:
+                          - type: sinusoid
+                          - dim: 768
+                          - num_positions: 510
+              - decoder_block:
+                  sublayers:
+                    - masked_self_attention:
+                        params:
+                          - dim: 768
+                          - heads: 8
+                          - mlp_dropout: 0.01
+                          - mlp_dim: 3072
+                    - cross_attention:
+                        params:
+                          - dim: 768
+                          - heads: 8
+                          - mlp_dropout: 0.01
+                          - mlp_dim: 3072
+                  num_blocks: 4
+    inference:
+      handlers:
+        - api:
+            params:
+              - url: http://localhost:21000/prediction
+        - file:
+            params:
+              - file_system: local
+              - destination: /home/cptr/preds
+        - s3:
+            params:
+              - file_system: s3
+              - destination: s3://cptr/preds/
+              - aws_access_key_env: AWS_ACCESS_KEY
+              - aws_secret_access_key_env: AWS_SECRET_ACCESS_KEY
+              - aws_region: AWS_REGION
+

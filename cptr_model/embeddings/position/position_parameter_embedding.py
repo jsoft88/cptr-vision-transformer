@@ -1,27 +1,27 @@
-from typing import OrderedDict, Any
-
-import torch.nn
+from typing import List, OrderedDict, Any
+import torch
+from torch.nn.parameter import Parameter
 from cptr_model.config.specifics.cptr.architecture_config_file_manager import ArchitectureConfigFileManager
 from cptr_model.config.config import Config
 from cptr_model.embeddings.position.base_position_embedding import BasePositionEmbedding
 
 
-class PositionParameterEmbedding(BasePositionEmbedding[torch.nn.Parameter]):
+class PositionParameterEmbedding(BasePositionEmbedding):
     KEY_DIMS = 'dims'
 
     def __init__(self, config: Config, **kwargs):
         self.config = config
-        self.dims = kwargs.get(PositionParameterEmbedding.KEY_DIMS, None)
-        self.param_position_embedding: torch.nn.Parameter = torch.nn.Parameter(torch.zeros(self.dims))
+        self.model_config = config.cptr_specifics
+        self.dims: List[int] = kwargs.get(PositionParameterEmbedding.KEY_DIMS, None)
+        super().__init__(config, **kwargs)
+        self.param_position_embedding = Parameter(torch.zeros(*self.dims))
 
-        super().__init__(kwargs)
-
-    def __verify_required_args(self) -> None:
+    def _verify_required_args(self) -> None:
         if not self.dims:
             raise ValueError(f'PositionEmbedding:: {PositionParameterEmbedding.KEY_DIMS} is None')
 
-    def get_position_embedding_layer(self) -> torch.nn.Parameter:
-        return self.param_position_embedding
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x + self.param_position_embedding
 
     def weight_transfer_from_dict(self, weights: OrderedDict[str, Any]) -> None:
         self.param_position_embedding = weights['param_position_embedding']

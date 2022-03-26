@@ -1,15 +1,16 @@
+from pytorch_lightning import LightningModule
 from cptr_model.config.config import Config
 
 
-class ModelBuilder:
+class ModelBuilder(LightningModule):
     def __init__(self, config: Config, **kwargs) -> None:
-        pass
+        super(ModelBuilder, self).__init__()
 
     def _verify_required_args(self) -> None:
         raise NotImplementedError('__verified_required_args method not implemented in ModelBuilder')
 
     def build_model(self) -> None:
-        self.__verify_required_args()
+        self._verify_required_args()
         self._building_model_blocks()
 
     def _building_model_blocks(self) -> None:

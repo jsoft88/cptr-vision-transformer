@@ -1,12 +1,10 @@
 from typing import Any, OrderedDict
-
 import torch.nn
 from pytorch_lightning import LightningModule
-
 from cptr_model.core.core_module_extension import CoreModuleExtension
 
 
-class MLP(LightningModule, CoreModuleExtension):
+class MLP(torch.nn.Module, CoreModuleExtension):
     KEY_LATENT_DIM = 'latent-dim'
     KEY_MLP_DIM = 'mlp-dim'
     KEY_DROPOUT_RATE = 'dropout-rate'
@@ -16,12 +14,13 @@ class MLP(LightningModule, CoreModuleExtension):
         self.mlp_dim = kwargs.get(MLP.KEY_MLP_DIM, None)
         self.dropout_rate = kwargs.get(MLP.KEY_DROPOUT_RATE, None)
         self.__verify_required_args()
-        self.latent_dim = float(self.latent_dim)
-        self.mlp_dim = float(self.mlp_dim)
+        super(MLP, self).__init__()
+        self.latent_dim = self.latent_dim
+        self.mlp_dim = self.mlp_dim
         self.dropout_rate = float(self.dropout_rate)
         self.fc1 = torch.nn.Linear(self.latent_dim, self.mlp_dim)
         self.fc2 = torch.nn.Linear(self.mlp_dim, self.latent_dim)
-        self.activation = torch.nn.GELU
+        self.activation = torch.nn.GELU()
         self.dropout = torch.nn.Dropout(self.dropout_rate)
 
         self.__init_weights()

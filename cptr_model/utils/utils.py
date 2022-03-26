@@ -1,5 +1,6 @@
 import json
 from typing import Any, Dict, OrderedDict
+from torch import Tensor
 
 
 class Utils:
@@ -15,3 +16,7 @@ class Utils:
     @classmethod
     def bytes_to_dict(cls, bytes_to_convert: bytes) -> Dict[Any, Any]:
         return json.loads(bytes_to_convert.decode('utf-8'))
+
+    @classmethod
+    def weight_transfer_transpose(cls, weight: Tensor) -> Tensor:
+        return weight.transpose(1, 0)

@@ -54,7 +54,7 @@
                   },
                   {
                     "name": "num_positions",
-                    "value": 10
+                    "value": 576
                   }
                 ]
               }
@@ -107,7 +107,7 @@
                   },
                   {
                     "name": "num_positions",
-                    "value": 10
+                    "value": 576
                   },
                   {
                     "name": "vocab_size",
@@ -159,6 +159,29 @@
                 ]
               }
             ]
+          }
+        ]
+      }
+    ],
+    "tranformations": [
+      {
+        "apply_to": "image",
+        "transforms": [
+          {
+            "type": "patch-cropping",
+            "extra_args": {
+              "patch-size": 16,
+              "is-tensor": false
+            }
+          }
+        ]
+      },
+      {
+        "apply_to": "tensor",
+        "transforms": [
+          {
+            "type": "patch-flatten",
+            "extra_args": {}
           }
         ]
       }

@@ -6,7 +6,7 @@ class BaseFileHandler(ABC):
     def __init__(self, **kwargs):
         pass
 
-    def list_files(self) -> List[str]:
+    def list_files(self, pattern: str) -> List[str]:
         raise NotImplementedError('Method list_files is not implemented')
 
     def retrieve_file(self, path: str) -> bytes:

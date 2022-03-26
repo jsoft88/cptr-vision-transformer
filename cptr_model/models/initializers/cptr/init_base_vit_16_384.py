@@ -1,5 +1,4 @@
 from typing import Any, Optional, OrderedDict
-
 from pytorch_lightning.core.lightning import LightningModule
 from cptr_model.config.config import Config
 from cptr_model.config.specifics.cptr.architecture_config_file_manager import ArchitectureConfigFileManager
@@ -8,7 +7,7 @@ from cptr_model.embeddings.input.word_embedding import WordEmbedding
 from cptr_model.models.cptr.cptr import CPTRModelBuilder
 from cptr_model.models.cptr.decoder.cptr_decoder_block import CPTRDecoderBlock
 from cptr_model.models.cptr.encoder.cptr_encoder_block import CPTREncoderBlock
-from cptr_model.models.initializers.cptr.base_initializer import BaseInitializer
+from cptr_model.models.initializers.base_initializer import BaseInitializer
 from cptr_model.utils.file_handlers.base_file_handler import BaseFileHandler
 from cptr_model.utils.utils import Utils
 
@@ -24,7 +23,7 @@ class BaseVit16384(BaseInitializer):
         self.number_encoder_layers = kwargs.get(BaseVit16384.KEY_NUMBER_ENCODER_LAYERS, None)
         self.number_decoder_layers = kwargs.get(BaseVit16384.KEY_NUMBER_DECODER_LAYERS, None)
 
-    def map_state_dict_to_model(self) -> LightningModule:
+    def map_state_dict_to_model(self) -> None:
         if not self.number_encoder_layers:
             raise ValueError('Number of encoder layers is None')
 
@@ -67,4 +66,3 @@ class BaseVit16384(BaseInitializer):
             CPTRModelBuilder.StateKey.CPTR_LINEAR_LAYER_BIAS: model_dict['head.bias']
         }))
 
-        return self.model

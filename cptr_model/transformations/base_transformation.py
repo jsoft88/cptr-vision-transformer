@@ -1,19 +1,17 @@
-import abc
-from typing import List
-
+from typing import Any, List, Union
 import torch
 
 
-class BaseTransformation(abc.ABC):
+class BaseTransformation(object):
     def __int__(self, **kwargs) -> None:
         pass
 
     def _verify_required_parameters_for_transformation(self):
         raise NotImplementedError('Missing implementation for method')
 
-    def apply(self) -> List[torch.Tensor]:
+    def __call__(self, sample: torch.Tensor) -> Union[List[torch.Tensor], torch.Tensor]:
         self._verify_required_parameters_for_transformation()
-        return self.__do_transformation()
+        return self.__do_transformation(sample)
 
-    def __do_transformation(self) -> List[torch.Tensor]:
+    def _do_transformation(self, sample: torch.Tensor) -> Union[List[torch.Tensor], torch.Tensor]:
         raise NotImplementedError('Missing implementation of transformation step')

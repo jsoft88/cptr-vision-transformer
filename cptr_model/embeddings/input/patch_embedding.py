@@ -1,5 +1,5 @@
 from typing import Any, OrderedDict
-import torch.nn
+import torch
 from torch.nn import Conv2d
 from cptr_model.config.specifics.cptr.architecture_config_file_manager import ArchitectureConfigFileManager
 from cptr_model.config.config import Config
@@ -8,9 +8,9 @@ from cptr_model.factory.input_embeddings import embedding_factory
 
 
 class PatchEmbedding(torch.nn.Module, CoreModuleExtension):
-    KEY_IN_CHANNELS = 'in-channels'
-    KEY_OUT_CHANNELS = 'out-channels'
-    KEY_KERNEL_SIZE = 'kernel-size'
+    KEY_IN_CHANNELS = 'channel_in'
+    KEY_OUT_CHANNELS = 'channel_out'
+    KEY_KERNEL_SIZE = 'kernel_size'
     KEY_STRIDE = 'stride'
 
     def __init__(self, config: Config, **kwargs) -> None:
@@ -28,8 +28,8 @@ class PatchEmbedding(torch.nn.Module, CoreModuleExtension):
         self.embedding_layer = Conv2d(
             in_channels=self.in_channels,
             out_channels=self.out_channels,
-            kernel_size=self.kernel_size,
-            stride=self.stride
+            kernel_size=(self.kernel_size[0], self.kernel_size[1]),
+            stride=(self.kernel_size[0], self.kernel_size[1])
         ).to(self.config.device)
 
     def __verify_required_args(self) -> None:
@@ -48,15 +48,19 @@ class PatchEmbedding(torch.nn.Module, CoreModuleExtension):
         if not self.kernel_size:
             raise ValueError('kernel_size value is None')
 
-    def forward(self, x: torch.Tensor) -> Any:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.embedding_layer(x)
-        return x
+        return x.flatten(2).transpose(2, 1)
 
     def weight_transfer_from_dict(self, weights: OrderedDict[str, Any]) -> None:
-        self.embedding_layer.weight = weights[PatchEmbedding.StateKey.EMBEDDING_LAYER_WEIGHT]
+        model_dict = self.state_dict()
+        model_dict['embedding_layer.weight'] = weights[PatchEmbedding.StateKey.EMBEDDING_LAYER_WEIGHT]
+        self.load_state_dict(model_dict)
     
     def bias_transfer_from_dict(self, bias: OrderedDict[str, Any]) -> None:
-        self.embedding_layer.bias = bias[PatchEmbedding.StateKey.EMBEDDING_LAYER_BIAS]
+        model_dict = self.state_dict()
+        model_dict['embedding_layer.bias'] = bias[PatchEmbedding.StateKey.EMBEDDING_LAYER_BIAS]
+        self.load_state_dict(model_dict)
 
     def weight_transfer_to_dict(self) -> OrderedDict[str, Any]:
         return OrderedDict({

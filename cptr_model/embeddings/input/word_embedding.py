@@ -17,9 +17,10 @@ class WordEmbedding(torch.nn.Module, CoreModuleExtension):
         self.vocab_size = kwargs.get(WordEmbedding.KEY_VOCAB_SIZE, None)
         self.pad_idx = kwargs.get(WordEmbedding.KEY_PAD_IDX, None)
 
-        self.__verify_required_args()
-        self.embedding = torch.nn.Embedding(self.vocab_size, self.dim, padding_idx=self.pad_idx).to(self.config.device)
         super(WordEmbedding, self).__init__()
+        # self.__verify_required_args()
+        # self.embedding = torch.nn.Embedding(self.vocab_size, self.dim, padding_idx=self.pad_idx).to(self.config.device)
+        
 
     def __verify_required_args(self) -> None:
         if not self.config:
