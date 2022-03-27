@@ -19,7 +19,10 @@ class CPTRMain:
         dm_args = dict({DataModuleFactory.KEY_FS: FSFactory.get_instance(self.config.file_system_type, self.config, **self.config.file_system_options)})
         data_module = DataModuleFactory.get_instance(self.config.input_reader_type, self.config, **dm_args)
         
-        trainer.predict(self.cptr_model, datamodule=data_module, return_predictions=False)
+        if self.config.training:
+            trainer.fit(self.cptr_model, datamodule=data_module)
+        else:
+            trainer.predict(self.cptr_model, return_predictions=True, datamodule=data_module)
 
 if __name__ == '__main__':
     CPTRMain().execute()

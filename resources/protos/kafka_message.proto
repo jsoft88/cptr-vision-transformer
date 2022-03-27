@@ -1,5 +1,0 @@
-syntax = "proto2";
-
-message KafkaMessage {
-    required bytes img = 1;
-}
