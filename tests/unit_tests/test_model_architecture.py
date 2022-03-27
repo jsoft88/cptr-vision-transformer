@@ -8,6 +8,15 @@ from cptr_model.utils.file_handlers.local_fs_handler import LocalFSHandler
 from tests.utils.test_fixtures.args_fixture import get_args_for_local_fs
 
 
+def test_device_assignment(get_args_for_local_fs):
+    include_gpu_arg = get_args_for_local_fs + ['--default-use-gpu']
+    config = Config(include_gpu_arg)
+    cptr = CPTRModelBuilder(config)
+    cptr.build_model()
+
+    # just picking some random internal layer to see if the assignment to device was done correctly
+    assert cptr.encoder_input_layer.embedding_layer.weight.type() == 'torch.cuda.FloatTensor'
+
 def test_encoder_block(get_args_for_local_fs):
     config = Config(get_args_for_local_fs)
     dm = LocalMSCocoData(config, LocalFSHandler(), **{LocalMSCocoData.KEY_MAX_LEN: 510})
@@ -63,7 +72,7 @@ def test_prediction(get_args_for_local_fs):
         print(bert_tokenizer.batch_decode(tokenizer_outputs['input_ids']))
         predict_batch = (1, img, tokenizer_outputs['input_ids'], tokenizer_outputs.input_ids)
         out = cptr.predict_step(predict_batch, 0, 0)
-        raise Exception(out)
+        assert out != None
 
 
 

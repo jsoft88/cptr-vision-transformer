@@ -35,7 +35,7 @@ class PositionSinCosEmbedding(BasePositionEmbedding):
         sinusoid_table[:, 0::2] = torch.sin(sinusoid_table[:, 0::2])
         sinusoid_table[:, 1::2] = torch.cos(sinusoid_table[:, 1::2])
 
-        return torch.FloatTensor(sinusoid_table).unsqueeze(0)
+        return torch.FloatTensor(sinusoid_table).unsqueeze(0).to(device=torch.device('cuda' if self.config.default_use_gpu else 'cpu'))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.pos_table[:, :x.shape[1], :].clone().detach() + x

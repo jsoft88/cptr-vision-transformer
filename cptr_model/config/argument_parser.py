@@ -1,5 +1,6 @@
 import argparse
 from typing import Any
+import sys
 
 
 class ArgumentParser:
@@ -15,30 +16,12 @@ class ArgumentParser:
         import cptr_model.factory.utils.fs_factory as fsf
         import cptr_model.factory.data_modules.data_module_factory as dmf
         import cptr_model.factory.models.initializers_factory as mif
-        
-        self.encoder_group.add_argument(
-            '--enc-transformation-types',
-            nargs='+',
-            help='List of transformations to apply to input data',
-            dest='enc_transformation_types',
-            default=[],
-            required=False
-        )
 
         self.encoder_group.add_argument(
             '--enc-norm-eps',
             help='epsilon value to use in normalization layer in encoder',
             dest='enc_norm_eps',
             default=1e-5,
-            required=False
-        )
-
-        self.decoder_group.add_argument(
-            '--dec-transformation-types',
-            nargs='+',
-            help='List of transformations to apply to input data',
-            dest='dec_transformation_types',
-            default=[],
             required=False
         )
 
@@ -289,4 +272,9 @@ class ArgumentParser:
 
         # TODO: Consider adding args for handling different types of authentications.
 
-        return self.parser.parse_args(args)
+        try:
+            options = self.parser.parse_args(args)
+            return options
+        except:
+            self.parser.print_usage()
+            sys.exit(0)

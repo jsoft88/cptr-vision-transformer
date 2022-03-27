@@ -1,10 +1,12 @@
 from pytorch_lightning import LightningModule
 from cptr_model.config.config import Config
+import torch
 
 
 class ModelBuilder(LightningModule):
     def __init__(self, config: Config, **kwargs) -> None:
         super(ModelBuilder, self).__init__()
+        self.config = config
 
     def _verify_required_args(self) -> None:
         raise NotImplementedError('__verified_required_args method not implemented in ModelBuilder')
@@ -12,6 +14,7 @@ class ModelBuilder(LightningModule):
     def build_model(self) -> None:
         self._verify_required_args()
         self._building_model_blocks()
+        self.to(device=torch.device('cuda' if self.config.default_use_gpu else 'cpu'))
 
     def _building_model_blocks(self) -> None:
         raise NotImplementedError('_building_model_blocks not implemented')

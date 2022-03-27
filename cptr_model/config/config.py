@@ -15,12 +15,8 @@ class Config(SpecificsMixin):
 
         parsed_args = ArgumentParser().parse_arguments(*args)
 
-        self.encoder_transformation_types = parsed_args.enc_transformation_types
         self.encoder_normalization_eps = parsed_args.enc_norm_eps
-        
-        self.decoder_transformation_types = parsed_args.dec_transformation_types
         self.decoder_normalization_eps = parsed_args.dec_norm_eps
-
         self.file_system_type = parsed_args.file_system
         self.file_system_options = dict([entry.split('=') for entry in (parsed_args.fs_options or [])])
         self.pretrained_model_path = parsed_args.pretrained_weights_path

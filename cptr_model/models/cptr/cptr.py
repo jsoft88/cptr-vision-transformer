@@ -45,11 +45,6 @@ class CPTRModelBuilder(ModelBuilder, CoreModuleExtension, FetcherDependencyMixin
         self.patch_embedding_stride = self.model_config.patch_embedding_stride
         self.patch_embedding_channels_in = self.model_config.patch_embedding_channel_in
         self.patch_embedding_channels_out = self.model_config.patch_embedding_channel_out
-        
-        self.image_transformation_types = config.encoder_transformation_types
-        self.image_transformations = None
-        self.word_transformation_types = config.decoder_transformation_types
-        self.word_transformations = None
         self.patch_position_embedding_type = self.model_config.encoder_position_embedding_type
         self.word_position_embedding_type = self.model_config.decoder_position_embedding_type
         self.lr_decay_factor = self.config.lr_decay_factor
@@ -142,7 +137,6 @@ class CPTRModelBuilder(ModelBuilder, CoreModuleExtension, FetcherDependencyMixin
 
     def _decoder_forward(self, x_e: torch.Tensor, captions_ids: torch.Tensor, pad_mask: torch.Tensor, lookahead_mask: torch.Tensor) -> torch.Tensor:
         x_d = self.decoder_input_layer(captions_ids)
-        print(f'DEC_FORWARD ==> {x_d.shape}')
         x_d = self.decoder_input_position_embeddings(x_d)
 
         for dec_layer in self.decoder_block_layers:
@@ -202,10 +196,6 @@ class CPTRModelBuilder(ModelBuilder, CoreModuleExtension, FetcherDependencyMixin
         with torch.no_grad():
             
             enc_output = self._encoder_forward(x_e)
-            #enc_output = enc_output.unsqueeze(1)
-            #init_seq_ids = init_seq_ids.unsqueeze(1) # [BATCH_SIZE x 1 x MAX_LEN]
-            #init_x_d = init_x_d.unsqueeze(1) # [BATCH_SIZE x MAX_LEN x DIM] -> [BATCH_SIZE x 1 x MAX_LEN x DIM]
-            #dec_output = self._predict_model_decode(enc_output, init_x_d, pad_mask, lookahead_mask)
             dec_output = self._predict_model_decode(enc_output, init_seq_ids, pad_mask, lookahead_mask)
             dec_output = dec_output.unsqueeze(1)
             init_seq_ids = init_seq_ids.unsqueeze(1)
