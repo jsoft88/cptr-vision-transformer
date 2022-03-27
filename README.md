@@ -38,7 +38,7 @@ Please refer to the original paper for details on how to train the model to obta
 
 :gear: Configuration based on CLI params and yaml-file based for tweaking different parameters and dimensions of the transformer. Additionally, dynamic linking of values incoming from the CLI into the yaml file is also provided.
 
-:flopy_disk: Abstractions for filesystem operations are provided in a limited set of the AbstractFileSystem, and concrete implementations for S3 and local file system are available. Filesystem objects (and objects in general) are injected as dependencies to components depending on them.
+:floppy_disk: Abstractions for filesystem operations are provided in a limited set of the AbstractFileSystem, and concrete implementations for S3 and local file system are available. Filesystem objects (and objects in general) are injected as dependencies to components depending on them.
 
 :abacus: What is worth highlighting as well is the definition of an structure for model development; I am proposing here to apply different software engineering principles and design patterns that are widely adopted for other types of developments and why shouldn't be the case for deep learning models as well? I am trying to depart from the common development of having just a bunch of python modules in a single package or sometimes even a very big file with every component being part of a single file.
 
@@ -50,29 +50,11 @@ To allow for autonomy and flexibility when building the model and training, a co
 ### CLI Params
 
 ```python
-self.encoder_group.add_argument(
-            '--enc-transformation-types',
-            nargs='+',
-            help='List of transformations to apply to input data',
-            dest='enc_transformation_types',
-            default=[],
-            required=False
-        )
-
         self.encoder_group.add_argument(
             '--enc-norm-eps',
             help='epsilon value to use in normalization layer in encoder',
             dest='enc_norm_eps',
             default=1e-5,
-            required=False
-        )
-
-        self.decoder_group.add_argument(
-            '--dec-transformation-types',
-            nargs='+',
-            help='List of transformations to apply to input data',
-            dest='dec_transformation_types',
-            default=[],
             required=False
         )
 
